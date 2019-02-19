@@ -1,13 +1,18 @@
-FROM ubuntu:18.04
+FROM alpine:3.9
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -y upgrade \
-    && DEBIAN_FRONTEND=noninteractive apt-get -y install strongswan iptables uuid-runtime ndppd openssl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk --no-cache add --virtual .build-dependencies git make g++ linux-headers wget ca-certificates libnl3-dev glib-dev \
+    && mkdir -p /usr/src \
+    && cd /usr/src \
+    && git clone https://github.com/kotfenix/ndppd.git \
+    && cd /usr/src/ndppd \
+    && make && make install \
+    && cd / && rm -rf /usr/src/ndppd \
+    && apk del .build-dependencies
 
-RUN rm /etc/ipsec.secrets
-RUN mkdir /config
-RUN (cd /etc && ln -s /config/ipsec.secrets .)
+RUN apk -U upgrade \
+    && apk add --update --no-cache openssl util-linux strongswan bash ip6tables libstdc++ libgcc \
+    && rm -rf /var/cache/apk/* \
+    && rm -f /etc/ipsec.secrets
 
 ADD ./etc/* /etc/
 ADD ./bin/* /usr/bin/
