@@ -1,18 +1,20 @@
-FROM alpine:3.10
+FROM alpine:3.11
 
-RUN apk --no-cache add --virtual .build-dependencies git make g++ linux-headers wget ca-certificates libnl3-dev glib-dev \
+RUN set -x \
+    && apk --no-cache add --virtual .build-dependencies \
+    git make g++ linux-headers wget ca-certificates libnl3-dev glib-dev \
+    \
     && mkdir -p /usr/src \
     && cd /usr/src \
     && git clone https://github.com/kotfenix/ndppd.git \
     && cd /usr/src/ndppd \
     && make && make install \
     && cd / && rm -rf /usr/src/ndppd \
-    && apk del .build-dependencies
-
-RUN apk -U upgrade \
-    && apk add --update --no-cache openssl util-linux strongswan bash nftables iptables ip6tables libstdc++ libgcc \
-    && rm -rf /var/cache/apk/* \
-    && rm -f /etc/ipsec.secrets
+    && apk del .build-dependencies \
+    \
+    && apk add --no-cache openssl util-linux strongswan bash iptables ip6tables libstdc++ libgcc \
+    && rm -f /etc/ipsec.secrets \
+    && mkdir /etc/mobileconfig
 
 ADD ./etc/* /etc/
 ADD ./bin/* /usr/bin/
@@ -23,4 +25,5 @@ VOLUME /config
 # http://blogs.technet.com/b/rrasblog/archive/2006/06/14/which-ports-to-unblock-for-vpn-traffic-to-pass-through.aspx
 EXPOSE 500/udp 4500/udp
 
-CMD /usr/bin/start-vpn
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/bin/start-vpn"]
